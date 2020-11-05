@@ -20,6 +20,11 @@ public class EmployeePayrollData {
 	}
 
 	@Override
+	public int hashCode() {
+		return Objects.hash(emp_id, gender, name, salary, startDate);
+	}
+
+	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
