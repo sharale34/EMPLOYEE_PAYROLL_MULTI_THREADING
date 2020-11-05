@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -16,6 +17,8 @@ public class EmployeePayrollDBService {
 	private static EmployeePayrollDBService employeePayrollDBService;
 	private static Logger log = Logger.getLogger(EmployeePayrollDBService.class.getName());
 	private int connectionCounter = 0;
+	Connection connection = null;
+	private PreparedStatement preparedStatement = null;
 
 	// creating the object of Signature and getting instance
 	public static EmployeePayrollDBService getInstance() {
@@ -30,7 +33,6 @@ public class EmployeePayrollDBService {
 		String jdbcURL = "jdbc:mysql://localhost:3306/payroll_service";
 		String userName = "root";
 		String password = "Sourabhharale@143";
-		Connection connection = null;
 		// the DriverManager class will attempt to load available JDBC drivers
 		log.info("Processing Thread : " + Thread.currentThread().getName() + "Connecting to database : " + jdbcURL);
 		connection = DriverManager.getConnection(jdbcURL, userName, password);
@@ -80,6 +82,23 @@ public class EmployeePayrollDBService {
 			}
 			employeePayrollData = new EmployeePayrollData(employeeId, name, gender, salary, startDate);
 		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		try (Connection connection = this.getConnection();) {
+			double deductions = salary * 0.2;
+			double taxablePay = salary - deductions;
+			double tax = taxablePay * 0.1;
+			double netPay = salary - tax;
+			String sql1 = String.format(
+					"INSERT INTO payroll_details(emp_id,basic_pay,deductions,taxable_pay,tax ,net_pay)VALUES (%s,%s,%s,%s,%s,%s)",
+					employeeId, salary, deductions, taxablePay, tax, netPay);
+			PreparedStatement preparedStatement = connection.prepareStatement(sql);
+			int rowAffected = preparedStatement.executeUpdate(sql1);
+			if (rowAffected == 1) {
+				employeePayrollData = new EmployeePayrollData(employeeId, name, gender, salary, startDate);
+			}
+		}catch (Exception e) {
 			e.printStackTrace();
 		}
 		return employeePayrollData;
