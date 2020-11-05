@@ -50,7 +50,7 @@ public class EmployeePayrollService {
 		employeePayrollList.forEach(employeePayrollData -> {
 			// creating task using runnable to execute the thread
 			Runnable task = () -> {
-				//employee payroll object id is set to false because get is not added
+				// employee payroll object id is set to false because get is not added
 				employeeAdditionStatus.put(employeePayrollData.hashCode(), false);
 				log.info("Employee being added : " + Thread.currentThread().getName());
 				try {
@@ -62,7 +62,7 @@ public class EmployeePayrollService {
 				employeeAdditionStatus.put(employeePayrollData.hashCode(), true);
 				log.info("Employee added : " + Thread.currentThread().getName());
 			};
-			//creating a thread and assigning to start the task
+			// creating a thread and assigning to start the task
 			Thread thread = new Thread(task, employeePayrollData.name);
 			thread.start();
 		});
@@ -86,5 +86,48 @@ public class EmployeePayrollService {
 		if (ioService.equals(IOService.DB_IO))
 			return employeePayrollList.size();
 		return 0;
+	}
+
+	public void updateSalaryOfMultipleEmployees(Map<String, Double> employeeSalaryMap) {
+		Map<Integer, Boolean> salaryUpdateStatus = new HashMap<>();
+		employeeSalaryMap.forEach((employee, salary) -> {
+			Runnable salaryUpdate = () -> {
+				salaryUpdateStatus.put(employee.hashCode(), false);
+				log.info("Salary being updated : " + Thread.currentThread().getName());
+				this.updateEmployeeSalary(employee, salary);
+				salaryUpdateStatus.put(employee.hashCode(), true);
+				log.info("Salary updated : " + Thread.currentThread().getName());
+			};
+			Thread thread = new Thread(salaryUpdate, employee);
+			thread.start();
+		});
+		while (salaryUpdateStatus.containsValue(false)) {
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		log.info("" + this.employeePayrollList);
+	}
+
+	public void updateEmployeeSalary(String name, double salary) {
+		int result = employeePayrollDBService.updateEmployeeData(name, salary);
+		if (result == 0)
+			return;
+		EmployeePayrollData employeePayrollData = this.getEmployeeData(name);
+		if (employeePayrollData != null)
+			employeePayrollData.salary = salary;
+	}
+
+	private EmployeePayrollData getEmployeeData(String name) {
+		return this.employeePayrollList.stream()
+				.filter(employeePayrollData -> employeePayrollData.name.equalsIgnoreCase(name)).findFirst()
+				.orElse(null);
+	}
+
+	public boolean checkEmployeePayrollInSyncWithDB(String name) {
+		List<EmployeePayrollData> employeeDataList = employeePayrollDBService.getEmployeeData(name);
+		return employeeDataList.get(0).equals(this.getEmployeeData(name));
 	}
 }
